@@ -67,38 +67,16 @@ df_PIB_capita = pd.DataFrame([
 ])
 
 # Show the first 10 rows of each DataFrame
+print("Head of anual GDP table")
 display(df_PIB_anual.head(10))
+print("Head of GDP per capita table")
 display(df_PIB_capita.head(10))
 
 #Unify the dataframes
 complete_df = pd.merge(df_PIB_anual, df_PIB_capita, on=["Año", "CCAA"], how="outer")
 display(complete_df.head())
 
-#Convert columns PIB_anual and PIB_capita to numeric values
-complete_df["PIB anual (€)"] = (
-    complete_df["PIB anual (€)"]
-    .astype(str)
-    .str.replace("\xa0", "")  # Clean the spaces
-    .str.replace("M€", "")  # Remove the "M€" suffix
-    .str.replace(",", ".")  # Replace comma with dot
-    .astype(float)  # Convert to float
-)
-
-complete_df["PIB per cápita (€)"] = (
-    complete_df["PIB per cápita (€)"]
-    .astype(str)
-    .str.replace("\xa0", "")  
-    .str.replace("€", "")  
-    .str.replace(",", ".") 
-    .astype(float) 
-)
-
-complete_df.info()
-
-# Clean the "CCAA" column values
-complete_df["CCAA"].unique()
-
-#Modificar los nombres de las comunidades autónomas para que sean más legibles
+#Function to normalize CCAA names in all our dataframes
 complete_df["CCAA"] = complete_df["CCAA"].replace({
     "Andalucía [+]": "Andalucia",
     "Aragón [+]": "Aragon",
@@ -119,43 +97,222 @@ complete_df["CCAA"] = complete_df["CCAA"].replace({
     "Navarra [+]": "Navarra",
     "País Vasco [+]": "PaisVasco",
     "Región de Murcia [+]": "Murcia",
+    "Total Nacional" : "Total_Nacional"
 })
 
+#Convert columns PIB_anual and PIB_capita to numeric values
+complete_df["PIB_anual"] = (
+    complete_df["PIB_anual"]
+    .astype(str)
+    .str.replace("\xa0", "")  # Clean the spaces
+    .str.replace("M€", "")  # Remove the "M€" suffix
+    .str.replace(",", ".")  # Replace comma with dot
+    .astype(float)  # Convert to float
+)
+
+complete_df["PIB_capita"] = (
+    complete_df["PIB_capita"]
+    .astype(str)
+    .str.replace("\xa0", "")  
+    .str.replace("€", "")  
+    .str.replace(",", ".") 
+    .astype(float) 
+)
+
+print("Basic info of PIB table created:")
+complete_df.info()
+
+print("Sample values:")
 display(complete_df.sample(15))
 
 #Save the DataFrame to a CSV file
 complete_df.to_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\running-trends-dataset.csv", index=False, sep=";")
 
 # Clean the data from "Renta ESP file"
-#Load the data
-import pandas as pd
 renta_df = pd.read_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\RentaESP-ccaa.csv", sep=";")
+renta_df.info()
+display(renta_df.head())
+renta_df.iloc[:, 1].unique()
 
-# Clean the data
-renta_cleaned_df = renta_df.pivot_table(index=renta_df.columns[0], columns=renta_df.columns[1], values=renta_df.columns[3])
+# We have to transpose this dataframe to extract the data we need
+pivoted_renta_df = renta_df.pivot(
+    index=["Periodo", "Comunidades y Ciudades Autónomas"], 
+    columns="Renta anual neta media por persona y por unidad de consumo",
+    values="Total"
+).reset_index()
 
-#Join the dataframe to our dataset 
-'''(como no puedo visualizarlo, no sé si este código está ok) - OJO con el orden de los valores'''
-# complete_df = renta_cleaned_df.merge(renta_cleaned_df, how='left', left_on='PIB_Capita', right_index=True)
-# print(complete_df.head())
+# Rename columns to match the column in complete_df
+pivoted_renta_df = pivoted_renta_df.rename(columns={
+    "Periodo": "Año",
+    "Comunidades y Ciudades Autónomas": "CCAA"
+})
+
+# Rename our columns to coincide with the dataset (running-data)
+pivoted_renta_df["CCAA"] = pivoted_renta_df["CCAA"].replace({
+    "01 Andalucía": "Andalucia",
+    "02 Aragón": "Aragon",
+    "03 Asturias, Principado de": "Asturias",
+    "05 Canarias": "Canarias", 
+    "06 Cantabria": "Cantabria",
+    "07 Castilla y León": "CastillaLeon",
+    "08 Castilla - La Mancha": "CastillaLaMancha",
+    "09 Cataluña": "Catalunya",
+    "18 Ceuta": "Ceuta",
+    "10 Comunitat Valenciana": "ComunidadValenciana",
+    "13 Madrid, Comunidad de": "Madrid",
+    "11 Extremadura": "Extremadura",
+    "12 Galicia": "Galicia",
+    "04 Balears, Illes": "Baleares",
+    "17 Rioja, La": "LaRioja",
+    "19 Melilla": "Melilla",
+    "15 Navarra, Comunidad Foral de": "Navarra",
+    "16 País Vasco": "PaisVasco",
+    "14 Murcia, Región de": "Murcia",
+    "Total Nacional" : "Total_Nacional"
+})
+
+pivoted_renta_df = pivoted_renta_df.sort_values(by="Año", ascending=False)
+display(pivoted_renta_df.head())
+
+# Join the data
+complete_df = pd.merge(complete_df, pivoted_renta_df, on=["Año", "CCAA"], how="left")
+print("This is our dataset now")
+display(complete_df.sample(10))
+
 
 # Clean the data from "Tasa paro ESP file"
 # Load the data
+import pandas as pd
 unemployment_df = pd.read_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\TasaParoESP-ccaa.csv", sep=";")
+unemployment_df.info()
+display(unemployment_df.head())
+
 # Clean the data
 column_ordered = ['Periodo', 'Comunidades y Ciudades Autónomas', 'Total', 'Edad', 'Sexo']
 unemployment_df = unemployment_df[column_ordered]
 unemployment_df['Periodo'] = unemployment_df['Periodo'].astype(str).str[:4]
 unemployment_df = unemployment_df[unemployment_df['Sexo'] == 'Ambos sexos']
 unemployment_df = unemployment_df[unemployment_df['Edad'] == 'Total']
-unemployment_df['Total'] = unemployment_df['Total'].str.replace(',', '.').astype(float)
-sum_by_period = unemployment_df.groupby(['Periodo', 'Comunidades y Ciudades Autónomas'])['Total'].sum().reset_index()
-#Show the result
-print(sum_by_period.head())
+unemployment_df['Total'] = unemployment_df['Total'].astype(str).str.replace(',', '.').astype(float)
+unemployment_df = unemployment_df.rename(
+    columns={'Comunidades y Ciudades Autónomas': 'CCAA',
+             "Periodo": "Año",
+             "Total" : "Total_paro"}
+)
 
-''' Ahora según el resultado que saquemos, tendremos que unirlo a nuestro dataset'''
+#Function to normalize CCAA names in all our dataframes
+unemployment_df["CCAA"] = unemployment_df["CCAA"].replace({
+    "01 Andalucía": "Andalucia",
+    "02 Aragón": "Aragon",
+    "03 Asturias, Principado de": "Asturias",
+    "05 Canarias": "Canarias", 
+    "06 Cantabria": "Cantabria",
+    "07 Castilla y León": "CastillaLeon",
+    "08 Castilla - La Mancha": "CastillaLaMancha",
+    "09 Cataluña": "Catalunya",
+    "18 Ceuta": "Ceuta",
+    "10 Comunitat Valenciana": "ComunidadValenciana",
+    "13 Madrid, Comunidad de": "Madrid",
+    "11 Extremadura": "Extremadura",
+    "12 Galicia": "Galicia",
+    "04 Balears, Illes": "Baleares",
+    "17 Rioja, La": "LaRioja",
+    "19 Melilla": "Melilla",
+    "15 Navarra, Comunidad Foral de": "Navarra",
+    "16 País Vasco": "PaisVasco",
+    "14 Murcia, Región de": "Murcia",
+    "Total Nacional" : "Total_Nacional"
+})
 
-# Extract the data from Google trends
-# Extract the data from Runedia
+unemployment_df.groupby(['Año', 'CCAA'])['Total_paro'].sum().reset_index()
+unemployment_df["Año"] = unemployment_df["Año"].astype(int)
+complete_df["Año"] = complete_df["Año"].astype(int)
+print(unemployment_df)
+
+# Join the data to our dataset (running-trends)
+complete_df = pd.merge(complete_df, unemployment_df[["Año", "CCAA", "Total_paro"]], on=["Año", "CCAA"], how="left")
+display(complete_df.sample(10))
+
+# Clean the google trends data
+import os
+import pandas as pd
+
+# Path where your Google Trends CSVs are stored
+folder_csv = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\google-trends"
+
+# Store cleaned DataFrames
+dfs = []
+
+# Load and clean all CSVs
+for file in os.listdir(folder_csv):
+    if file.endswith(".csv"):
+        year = os.path.splitext(file)[0]  # Extract year from filename
+        path = os.path.join(folder_csv, file)
+
+        # Skip the first row (header info), then set proper headers
+        df = pd.read_csv(path, skiprows=1)
+
+        # Ensure correct column names
+        df.columns = ["Región", "Busqueda_running"]
+        df["Año"] = int(year)
+        dfs.append(df)
+        print(f" df_{year} loaded.")
+
+# Combine all years into a single DataFrame
+df_running_completo = pd.concat(dfs, ignore_index=True)
+
+# Convert to wide format (one row per region, columns per year)
+df_running_pivot = df_running_completo.pivot(
+    index="Región",
+    columns="Año",
+    values="Busqueda_running"
+)
+
+# Rename columns like "busquedas_2004"
+df_running_pivot.columns = [f"busquedas_{col}" for col in df_running_pivot.columns]
+df_running_pivot = df_running_pivot.reset_index()
+
+# Convert back to long format for merging
+df_running_long = df_running_pivot.melt(
+    id_vars="Región",
+    var_name="Año",
+    value_name="busquedas_running"
+)
+
+# Extract numeric year
+df_running_long["Año"] = df_running_long["Año"].str.extract(r'(\d{4})').astype(int)
+
+# Rename and normalize region names
+df_running_long = df_running_long.rename(columns={"Región": "CCAA"})
+df_running_long["CCAA"] = df_running_long["CCAA"].replace({
+    "Andalucía": "Andalucia",
+    "Aragón": "Aragon",
+    "Principado de Asturias": "Asturias",
+    "Castilla y León": "CastillaLeon",
+    "Castilla-La Mancha": "CastillaLaMancha",
+    "Cataluña": "Catalunya",
+    "Comunidad Valenciana": "ComunidadValenciana",
+    "Comunidad de Madrid": "Madrid",
+    "Islas Baleares": "Baleares",
+    "La Rioja": "LaRioja",
+    "País Vasco": "PaisVasco",
+    "Región de Murcia": "Murcia",
+    "Canarias": "Canarias",
+    "Cantabria": "Cantabria",
+    "Ceuta": "Ceuta",
+    "Extremadura": "Extremadura",
+    "Galicia": "Galicia",
+    "Melilla": "Melilla",
+    "Navarra": "Navarra"
+})
+
+# Join this data to our running-trends dataset
+complete_df = pd.merge(complete_df, df_running_long, on=["Año", "CCAA"], how="left")
+
+# Final check
+print("Final dataset with running searches added:")
+display(complete_df.sample(10))
+
+# Extract the data from Runediagi
 # Clean the data from "Licencias ESP file"
 
