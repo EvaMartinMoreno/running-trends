@@ -36,7 +36,7 @@ For afterwords, analyze the data to produce visualizations that will either prov
 
 # DEVELOPEMENT (me he quedado aquí)
 
-**1. Are sharks getting tired of attacking, or are humans getting more annoying?**
+**H1. Communities with greater purchasing power are more interessted in running**
 
 ![scatterplot](https://github.com/emmacunill/project_em/blob/main/images/scatter_attacks_years.jpg?raw=true)
 
@@ -59,7 +59,7 @@ Let's understand why the sharks are not only not getting, tired, but getting fie
 
 
 
-**2. If they're not getting tired, why is that?**
+**H2.Communities with the highest unemployment are less interested in running**
 
 Shall we take a look at the activities people were doing when the attackes occurred?
 
@@ -83,7 +83,7 @@ But is it all humans or just a fraction?
 
 
 
-**3.Are men more attaked than women or the contrary?**
+**H3.There are more races in communities with major GDP**
 
 Let's prove the obvious answer, that we're not going to say."
 

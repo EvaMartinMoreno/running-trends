@@ -4,13 +4,13 @@ import seaborn as sns
 from sklearn.preprocessing import MinMaxScaler
 from scipy.stats import pearsonr
 
-#**Visualization**
-#H1: Communities with greater purchasing power are more interested in running*
-# Load dataset
+# === Load dataset ===
 df = pd.read_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\running-trends-dataset.csv", sep=";")
 df = df.drop_duplicates(subset=["Año", "CCAA"])
 
-# === 1. Normalized Evolution of Income and Google Searches ===
+# === H1: Communities with greater purchasing power are more interested in running ===
+
+# 1. Normalized evolution of income and searches
 evolution = df.groupby("Año")[["Renta neta media por persona", "busquedas_running"]].mean().dropna()
 scaler = MinMaxScaler()
 evolution[["Renta neta media por persona", "busquedas_running"]] = scaler.fit_transform(evolution)
@@ -20,24 +20,17 @@ sns.lineplot(data=evolution, x=evolution.index, y="Renta neta media por persona"
 sns.lineplot(data=evolution, x=evolution.index, y="busquedas_running", label="Normalized Searches", linewidth=2)
 plt.title("Normalized Evolution of Income and 'Running' Searches in Spain (2004–2024)")
 plt.xlabel("Year")
-plt.ylabel("Normalized Value (0 - 1)")
+plt.ylabel("Normalized Value")
 plt.grid(True)
 plt.legend()
 plt.tight_layout()
 plt.show()
 
-# === 2. Income Distribution and Stats ===
+# 2. Distribution of average income per region
 mean_income = df.groupby("CCAA", as_index=False)["Renta neta media por persona"].mean()
 mean_val = mean_income["Renta neta media por persona"].mean()
 median = mean_income["Renta neta media por persona"].median()
 mode = mean_income["Renta neta media por persona"].mode()[0]
-quantiles = mean_income["Renta neta media por persona"].quantile([0.25, 0.5, 0.75])
-
-print(f"Mean: {mean_val:.2f} €")
-print(f"Median: {median:.2f} €")
-print(f"Mode: {mode:.2f} €")
-print("Quartiles:")
-print(quantiles)
 
 plt.figure(figsize=(10, 6))
 sns.histplot(mean_income["Renta neta media por persona"], bins=10, kde=True, color='skyblue')
@@ -52,7 +45,7 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-# === 3. Group Regions by Income Level ===
+# 3. Group regions by income
 q1 = mean_income["Renta neta media por persona"].quantile(0.25)
 q3 = mean_income["Renta neta media por persona"].quantile(0.75)
 
@@ -66,7 +59,7 @@ def classify_income(val):
 
 mean_income["Income_Group"] = mean_income["Renta neta media por persona"].apply(classify_income)
 
-# === 4. Group Regions by Search Volume ===
+# 4. Group regions by search score
 mean_search = df.groupby("CCAA", as_index=False)["busquedas_running"].mean()
 q1_s = mean_search["busquedas_running"].quantile(0.25)
 q3_s = mean_search["busquedas_running"].quantile(0.75)
@@ -81,82 +74,147 @@ def classify_search(val):
 
 mean_search["Search_Group"] = mean_search["busquedas_running"].apply(classify_search)
 
-# === 5. Merge Income + Search ===
+# 5. Merge both
 merged = pd.merge(mean_income, mean_search, on="CCAA")
 
-# === 6. Plot Searches by Income Group ===
-search_group_mean = merged.groupby("Income_Group", as_index=False)["busquedas_running"].mean()
+# 6. Plot average searches by income group
+group_search = merged.groupby("Income_Group", as_index=False)["busquedas_running"].mean()
 
 plt.figure(figsize=(8, 6))
-sns.barplot(data=search_group_mean, x="Income_Group", y="busquedas_running", palette="viridis", order=["High", "Medium", "Low"])
-plt.title("Average 'Running' Searches by Income Group")
+sns.barplot(data=group_search, x="Income_Group", y="busquedas_running", palette="viridis", order=["High", "Medium", "Low"])
+plt.title("Average Running Searches by Income Group")
 plt.xlabel("Income Group")
-plt.ylabel("Average Google Trends Score")
+plt.ylabel("Google Trends Score")
 plt.grid(axis="y")
 plt.tight_layout()
 plt.show()
 
-# === 7. Pearson Correlation ===
-x = merged["Renta neta media por persona"]
-y = merged["busquedas_running"]
-correlation, p_value = pearsonr(x, y)
+# 7. Correlation between income and searches
+corr, p_val = pearsonr(merged["Renta neta media por persona"], merged["busquedas_running"])
+print("\n📈 Pearson Correlation: Income vs Running")
+print(f"Correlation: {corr:.2f}, p-value: {p_val:.4f}")
+print("✅ Significant" if p_val < 0.05 else "⚠️ Not significant")
 
-print("\n📈 Pearson Correlation Analysis")
-print(f"Correlation coefficient (r): {correlation:.2f}")
-print(f"P-value: {p_value:.4f}")
-if p_value < 0.05:
-    print("✅ Statistically significant correlation.")
-else:
-    print("⚠️ No statistically significant correlation.")
+# 8. Evolution by group
+income_group_df = df.merge(mean_income[["CCAA", "Income_Group"]], on="CCAA")
 
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=income_group_df, x="Año", y="busquedas_running", hue="Income_Group", estimator="mean")
+plt.title("Running Searches by Income Group (2004–2024)")
+plt.xlabel("Year")
+plt.ylabel("Average Search Score")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
 
-#*H2.Communities with the highest unemployment are less interested in running*
-# === Hypothesis 2: Communities with the highest unemployment are less interested in running ===
+# === H2: Communities with the highest unemployment are less interested in running ===
 
-# 1. Calculate the average unemployment rate and running search interest by region
-avg_unemployment = df.groupby("CCAA", as_index=False)["Total_paro"].mean()
-avg_searches = df.groupby("CCAA", as_index=False)["busquedas_running"].mean()
+# === H2 extra: Evolution and distribution of Unemployment and Running Interest ===
 
-# 2. Merge both metrics
-df_h2 = pd.merge(avg_unemployment, avg_searches, on="CCAA")
+# 1. Normalized evolution of unemployment rate and running searches
+unemp_evolution = df.groupby("Año")[["Total_paro", "busquedas_running"]].mean().dropna()
 
-# 3. Classify regions based on unemployment level using quartiles
-q1 = df_h2["Total_paro"].quantile(0.25)
-q3 = df_h2["Total_paro"].quantile(0.75)
+# Normalization
+scaler = MinMaxScaler()
+unemp_evolution[["Total_paro", "busquedas_running"]] = scaler.fit_transform(unemp_evolution)
 
-def classify_unemployment(val):
-    if val < q1:
+# Plot normalized evolution
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=unemp_evolution, x=unemp_evolution.index, y="Total_paro", label="Normalized Unemployment", linewidth=2)
+sns.lineplot(data=unemp_evolution, x=unemp_evolution.index, y="busquedas_running", label="Normalized Running Searches", linewidth=2)
+plt.title("Normalized Evolution of Unemployment Rate and Running Searches (2004–2024)")
+plt.xlabel("Year")
+plt.ylabel("Normalized Value (0 - 1)")
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+# 2. Distribution of average unemployment rate by region
+mean_unemp_stats = df.groupby("CCAA", as_index=False)["Total_paro"].mean()
+mean_val_unemp = mean_unemp_stats["Total_paro"].mean()
+median_unemp = mean_unemp_stats["Total_paro"].median()
+mode_unemp = mean_unemp_stats["Total_paro"].mode()[0]
+q1_unemp = mean_unemp_stats["Total_paro"].quantile(0.25)
+q3_unemp = mean_unemp_stats["Total_paro"].quantile(0.75)
+
+# Print statistics
+print("\n📊 Unemployment Statistics (2000–2024)")
+print(f"Mean: {mean_val_unemp:.2f}%")
+print(f"Median: {median_unemp:.2f}%")
+print(f"Mode: {mode_unemp:.2f}%")
+print(f"Q1: {q1_unemp:.2f}%")
+print(f"Q3: {q3_unemp:.2f}%")
+
+# Plot distribution
+plt.figure(figsize=(10, 6))
+sns.histplot(mean_unemp_stats["Total_paro"], bins=10, kde=True, color='salmon')
+plt.axvline(mean_val_unemp, color='red', linestyle='--', label=f"Mean: {mean_val_unemp:.2f}%")
+plt.axvline(median_unemp, color='green', linestyle='--', label=f"Median: {median_unemp:.2f}%")
+plt.axvline(mode_unemp, color='purple', linestyle='--', label=f"Mode: {mode_unemp:.2f}%")
+plt.title("Unemployment Rate Distribution by Region (2000–2024)")
+plt.xlabel("Unemployment Rate (%)")
+plt.ylabel("Frequency")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# === H2 continuation: Grouping regions by unemployment level ===
+
+# Usamos los cuartiles ya calculados: q1_unemp, q3_unemp
+
+def classify_unemployment_group(rate):
+    if rate < q1_unemp:
         return "Low"
-    elif val > q3:
+    elif rate > q3_unemp:
         return "High"
     else:
         return "Medium"
 
-df_h2["Unemployment_Group"] = df_h2["Total_paro"].apply(classify_unemployment)
+mean_unemp_stats["Unemp_Group"] = mean_unemp_stats["Total_paro"].apply(classify_unemployment_group)
 
-# 4. Plot average Google search score per unemployment group
-grouped_search = df_h2.groupby("Unemployment_Group", as_index=False)["busquedas_running"].mean()
+# Agrupamos también búsquedas medias
+mean_search_unemp = df.groupby("CCAA", as_index=False)["busquedas_running"].mean()
+
+# Unimos ambas tablas
+df_h2_grouped = pd.merge(mean_unemp_stats, mean_search_unemp, on="CCAA")
+
+# === 1. Gráfico de barras: Búsquedas medias por grupo de desempleo ===
+search_by_unemp_group = df_h2_grouped.groupby("Unemp_Group", as_index=False)["busquedas_running"].mean()
 
 plt.figure(figsize=(8, 6))
-sns.barplot(data=grouped_search, x="Unemployment_Group", y="busquedas_running", palette="coolwarm", order=["High", "Medium", "Low"])
-plt.title("Average 'Running' Search Score by Unemployment Group")
+sns.barplot(data=search_by_unemp_group, x="Unemp_Group", y="busquedas_running", palette="coolwarm", order=["High", "Medium", "Low"])
+plt.title("Average 'Running' Searches by Unemployment Group")
 plt.xlabel("Unemployment Group")
-plt.ylabel("Average Google Trends Score")
+plt.ylabel("Google Trends Score")
 plt.grid(axis="y")
 plt.tight_layout()
 plt.show()
 
-# 5. Pearson correlation between unemployment and search interest
-x = df_h2["Total_paro"]
-y = df_h2["busquedas_running"]
-correlation, p_value = pearsonr(x, y)
+# === 2. Correlación entre tasa de paro y búsquedas ===
+x = df_h2_grouped["Total_paro"]
+y = df_h2_grouped["busquedas_running"]
+corr, p_val = pearsonr(x, y)
 
-# 6. Print correlation results
-print("\n📈 Pearson Correlation: Unemployment vs. Running Interest")
-print(f"Correlation coefficient (r): {correlation:.2f}")
-print(f"P-value: {p_value:.4f}")
-
-if p_value < 0.05:
+print("\n📉 Pearson Correlation: Unemployment vs Running Searches")
+print(f"Correlation: {corr:.2f}, p-value: {p_val:.4f}")
+if p_val < 0.05:
     print("✅ Statistically significant correlation.")
 else:
     print("⚠️ Correlation is not statistically significant.")
+
+# === 3. Evolución temporal de búsquedas por grupo de desempleo ===
+
+# Añadimos el grupo al dataset original
+df_unemp_evol = df.merge(mean_unemp_stats[["CCAA", "Unemp_Group"]], on="CCAA")
+
+# Gráfico de evolución
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=df_unemp_evol, x="Año", y="busquedas_running", hue="Unemp_Group", estimator="mean")
+plt.title("Evolution of 'Running' Searches by Unemployment Group (2004–2024)")
+plt.xlabel("Year")
+plt.ylabel("Google Trends Score")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
