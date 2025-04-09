@@ -181,3 +181,49 @@ plt.savefig(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\images\img8.
 print("✅ Graphic saved: img8")
 plt.show()
 
+# === Load dataset ===
+powerbi_cleaned = pd.read_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\running-trends-dataset.csv", sep=";")
+powerbi_cleaned = powerbi_cleaned.drop_duplicates(subset=["Año", "CCAA"]).copy()
+
+# === Drop missing values in relevant columns ===
+powerbi_cleaned.dropna(subset=["Renta neta media por persona", "Total_paro", "busquedas_running"])
+
+# === Remove outliers using IQR method ===
+def remove_outliers_iqr(data, column):
+    q1 = data[column].quantile(0.25)
+    q3 = data[column].quantile(0.75)
+    iqr = q3 - q1
+    lower = q1 - 1.5 * iqr
+    upper = q3 + 1.5 * iqr
+    return data[(data[column] >= lower) & (data[column] <= upper)]
+
+powerbi_cleaned = remove_outliers_iqr(powerbi_cleaned, "Renta neta media por persona")
+powerbi_cleaned = remove_outliers_iqr(powerbi_cleaned, "Total_paro")
+powerbi_cleaned = remove_outliers_iqr(powerbi_cleaned, "busquedas_running")
+
+# === Clasificación por año ===
+# Cuartiles por año
+q_income = powerbi_cleaned.groupby("Año")["Renta neta media por persona"].quantile([0.25, 0.75]).unstack()
+q_unemp = powerbi_cleaned.groupby("Año")["Total_paro"].quantile([0.25, 0.75]).unstack()
+q_search = powerbi_cleaned.groupby("Año")["busquedas_running"].quantile([0.25, 0.75]).unstack()
+
+# Clasificación por grupos
+def classify_by_quartiles(row, q, col):
+    if row[col] < q.loc[row["Año"], 0.25]:
+        return "Low"
+    elif row[col] > q.loc[row["Año"], 0.75]:
+        return "High"
+    else:
+        return "Medium"
+
+powerbi_cleaned["Income_Group"] = powerbi_cleaned.apply(lambda row: classify_by_quartiles(row, q_income, "Renta neta media por persona"), axis=1)
+powerbi_cleaned["Unemp_Group"] = powerbi_cleaned.apply(lambda row: classify_by_quartiles(row, q_unemp, "Total_paro"), axis=1)
+powerbi_cleaned["Search_Group"] = powerbi_cleaned.apply(lambda row: classify_by_quartiles(row, q_search, "busquedas_running"), axis=1)
+
+# === Save final clean CSV for Power BI ===
+output_path = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\processed\running_trends_cleaned_for_powerbi.csv"
+powerbi_cleaned.to_csv(output_path, index=False)
+print("✅ CSV with group classification and cleaned data saved to:")
+print(output_path)
+
+
