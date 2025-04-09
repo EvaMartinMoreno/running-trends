@@ -219,21 +219,64 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-# === Final Summary Table for Power BI ===
 
-# 1. Preparar los DataFrames con sus variables
-summary = mean_income[["CCAA", "Renta neta media por persona", "Income_Group"]].copy()
-summary = pd.merge(summary, mean_unemp_stats[["CCAA", "Total_paro", "Unemp_Group"]], on="CCAA")
-summary = pd.merge(summary, mean_search[["CCAA", "busquedas_running", "Search_Group"]], on="CCAA")
+# === FULL YEARLY DATASET for Power BI ===
 
-# 2. Reordenar columnas para claridad
-summary = summary[[
-    "CCAA",
-    "Renta neta media por persona", "Income_Group",
-    "Total_paro", "Unemp_Group",
-    "busquedas_running", "Search_Group"
-]]
+# 1. Clasificamos los grupos de renta por año
+q1_income = df.groupby("Año")["Renta neta media por persona"].quantile(0.25)
+q3_income = df.groupby("Año")["Renta neta media por persona"].quantile(0.75)
 
-# 3. Guardar en CSV
-summary.to_csv(r"C:/Users/evaru/Downloads/EVOLVE/python/running-trends/data/processed/running_trends_summary.csv", index=False)
-print("✅ Archivo 'running_trends_summary_by_region.csv' creado correctamente.")
+def classify_income_row(row):
+    year = row["Año"]
+    val = row["Renta neta media por persona"]
+    if val < q1_income[year]:
+        return "Low"
+    elif val > q3_income[year]:
+        return "High"
+    else:
+        return "Medium"
+
+# 2. Clasificamos el grupo de desempleo por año
+q1_unemp = df.groupby("Año")["Total_paro"].quantile(0.25)
+q3_unemp = df.groupby("Año")["Total_paro"].quantile(0.75)
+
+def classify_unemp_row(row):
+    year = row["Año"]
+    val = row["Total_paro"]
+    if val < q1_unemp[year]:
+        return "Low"
+    elif val > q3_unemp[year]:
+        return "High"
+    else:
+        return "Medium"
+
+# 3. Clasificamos el grupo de búsquedas por año
+q1_search = df.groupby("Año")["busquedas_running"].quantile(0.25)
+q3_search = df.groupby("Año")["busquedas_running"].quantile(0.75)
+
+def classify_search_row(row):
+    year = row["Año"]
+    val = row["busquedas_running"]
+    if val < q1_search[year]:
+        return "Low"
+    elif val > q3_search[year]:
+        return "High"
+    else:
+        return "Medium"
+
+# 4. Creamos nuevo DataFrame para exportar
+df_powerbi = df[[
+    "Año", "CCAA", 
+    "Renta neta media por persona", 
+    "Total_paro", 
+    "busquedas_running"
+]].dropna()
+
+# 5. Aplicamos clasificaciones
+df_powerbi["Income_Group"] = df_powerbi.apply(classify_income_row, axis=1)
+df_powerbi["Unemp_Group"] = df_powerbi.apply(classify_unemp_row, axis=1)
+df_powerbi["Search_Group"] = df_powerbi.apply(classify_search_row, axis=1)
+
+# 6. Guardar en CSV
+df_powerbi.to_csv("C:/Users/evaru/Downloads/EVOLVE/python/running-trends/data/processed/running_trends_evolution_dataset.csv", index=False)
+print("✅ Archivo 'running_trends_evolution_dataset.csv' creado correctamente con todos los años.")
