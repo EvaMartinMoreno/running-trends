@@ -18,12 +18,13 @@ For afterwords, analyze the data to produce visualizations that will either prov
 - Counter
 
 # HYPOTHESIS
+**Running. ¿Habit or trend? There is a significant trend towards an increase in running activity in general, but there are important peaks that create trend peaks.**
 
-**1. Running. ¿Habit or trend? There is a significant trend towards an increase in running activity in general, but there are important peaks that create trend peaks.** 
+*1. Communities with greater purchasing power are more interessted in running* 
 
-**2. Communities with greater purchasing power practice more running** 
+*2.Communities with the highest unemployment are less interested in running*
 
-**3.Communities with the highest unemployment rate have more running events**
+*3.There are more races in communities with major GDP*
 
 # PROCESS FOLLOWED
 
