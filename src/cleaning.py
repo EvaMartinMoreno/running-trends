@@ -237,38 +237,27 @@ display(complete_df.sample(10))
 import os
 import pandas as pd
 
-# Path where your Google Trends CSVs are stored
 folder_csv = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\google-trends"
-
-# Store cleaned DataFrames
 dfs = []
 
-# Load and clean all CSVs
 for file in os.listdir(folder_csv):
     if file.endswith(".csv"):
         year = os.path.splitext(file)[0]  # Extract year from filename
         path = os.path.join(folder_csv, file)
-
-        # Skip the first row (header info), then set proper headers
         df = pd.read_csv(path, skiprows=1)
-
-        # Ensure correct column names
         df.columns = ["Región", "Busqueda_running"]
         df["Año"] = int(year)
         dfs.append(df)
         print(f" df_{year} loaded.")
+    else: pass 
 
-# Combine all years into a single DataFrame
 df_running_completo = pd.concat(dfs, ignore_index=True)
-
-# Convert to wide format (one row per region, columns per year)
 df_running_pivot = df_running_completo.pivot(
     index="Región",
     columns="Año",
     values="Busqueda_running"
 )
 
-# Rename columns like "busquedas_2004"
 df_running_pivot.columns = [f"busquedas_{col}" for col in df_running_pivot.columns]
 df_running_pivot = df_running_pivot.reset_index()
 
@@ -279,10 +268,7 @@ df_running_long = df_running_pivot.melt(
     value_name="busquedas_running"
 )
 
-# Extract numeric year
 df_running_long["Año"] = df_running_long["Año"].str.extract(r'(\d{4})').astype(int)
-
-# Rename and normalize region names
 df_running_long = df_running_long.rename(columns={"Región": "CCAA"})
 df_running_long["CCAA"] = df_running_long["CCAA"].replace({
     "Andalucía": "Andalucia",
@@ -309,10 +295,12 @@ df_running_long["CCAA"] = df_running_long["CCAA"].replace({
 # Join this data to our running-trends dataset
 complete_df = pd.merge(complete_df, df_running_long, on=["Año", "CCAA"], how="left")
 
-# Final check
 print("Final dataset with running searches added:")
 display(complete_df.sample(10))
 
-# Extract the data from Runediagi
+#Save to csv
+complete_df.to_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\running-trends-dataset.csv", index=False, sep=";")
+
+# Extract the data from Runedia
 # Clean the data from "Licencias ESP file"
 
