@@ -218,3 +218,22 @@ plt.ylabel("Google Trends Score")
 plt.grid(True)
 plt.tight_layout()
 plt.show()
+
+# === Final Summary Table for Power BI ===
+
+# 1. Preparar los DataFrames con sus variables
+summary = mean_income[["CCAA", "Renta neta media por persona", "Income_Group"]].copy()
+summary = pd.merge(summary, mean_unemp_stats[["CCAA", "Total_paro", "Unemp_Group"]], on="CCAA")
+summary = pd.merge(summary, mean_search[["CCAA", "busquedas_running", "Search_Group"]], on="CCAA")
+
+# 2. Reordenar columnas para claridad
+summary = summary[[
+    "CCAA",
+    "Renta neta media por persona", "Income_Group",
+    "Total_paro", "Unemp_Group",
+    "busquedas_running", "Search_Group"
+]]
+
+# 3. Guardar en CSV
+summary.to_csv(r"C:/Users/evaru/Downloads/EVOLVE/python/running-trends/data/processed/running_trends_summary.csv", index=False)
+print("✅ Archivo 'running_trends_summary_by_region.csv' creado correctamente.")
