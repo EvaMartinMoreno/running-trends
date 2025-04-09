@@ -302,5 +302,29 @@ display(complete_df.sample(10))
 complete_df.to_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\running-trends-dataset.csv", index=False, sep=";")
 
 # Extract the data from Runedia
-# Clean the data from "Licencias ESP file"
+import requests
+from bs4 import BeautifulSoup
 
+url = 'https://runedia.mundodeportivo.com/calendario-carreras/espana/andalucia/provincia/?fechaIni=1-1-2024&fechaFi=1-1-2025'
+response = requests.get(url, headers=headers)
+
+if response.status_code == 200:
+    page_content = response.text
+else:
+    print(f'Error al acceder a la página: {response.status_code}')
+
+   
+soup = BeautifulSoup(page_content, 'html.parser')
+
+# Encuentra el contenedor principal de las carreras
+carreras = soup.find('div', class_='')
+
+for carrera in carreras:
+    nombre = carrera.find_all('nom cursa race-link()').text.strip()
+    dia = carrera.find('span', class_='dia').text.strip()
+    mes = carrera.find('span', class='mes').text.strip()
+    ubicacion = carrera.find('span', class_='lloc').text.strip()
+    distancia = carrera.find('span').text.strip()
+    print(f'Nombre: {nombre}, {dia}"-"{mes}, Ubicación: {ubicacion}, Distancia: {distancia}') 
+
+print(carreras)
