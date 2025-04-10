@@ -227,3 +227,75 @@ print("✅ CSV with group classification and cleaned data saved to:")
 print(output_path)
 
 
+# === H3: Communities with the highest GPD are potential running races organizators ===
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import pearsonr
+
+# === 1. Cargar datasets ===
+# Carreras scrapeadas (ya unidas)
+df_carreras = pd.read_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\runedia\carreras_unidas.csv")
+
+# Dataset original con el PIB
+df_pib = pd.read_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\processed\running_trends_cleaned_for_powerBI.csv", sep=",")
+df_pib = df_pib.drop_duplicates(subset=["Año", "CCAA"])
+
+# === 2. Procesar: número de carreras por CCAA ===
+carreras_por_ccaa = df_carreras.groupby("provincia").size().reset_index(name="num_carreras")
+
+# Normalizar nombre de provincias si hace falta (ej: valencia -> Comunidad Valenciana)
+carreras_por_ccaa["provincia"] = carreras_por_ccaa["provincia"].str.lower().str.replace("-", " ").str.strip()
+
+# Mapeo de provincias a CCAA oficial (si es necesario)
+# Aquí puedes adaptar según tus provincias exactas
+mapa_ccaa = {
+    "valencia": "Comunidad Valenciana",
+    "catalunya": "Catalunya",
+    "madrid": "Madrid",
+    "euskadi": "Pais Vasco",
+    "illes balears": "Baleares",
+    "castilla la mancha": "CastillaLaMancha",
+    "castilla y leon": "CastillaLeon",
+    "la rioja": "LaRioja",
+    "andalucia": "Andalucia",
+    "galicia": "Galicia",
+    "navarra": "Navarra",
+    "murcia": "Murcia",
+    "cantabria": "Cantabria",
+    "asturias": "Asturias",
+    "aragon": "Aragon",
+    "canarias": "Canarias",
+    "extremadura": "Extremadura",
+    "melilla": "Melilla",
+    "ceuta": "Ceuta"
+}
+carreras_por_ccaa["CCAA"] = carreras_por_ccaa["provincia"].map(mapa_ccaa)
+
+# === 3. PIB medio por comunidad autónoma ===
+pib_promedio = df_pib.groupby("CCAA", as_index=False)["PIB_anual"].mean()
+
+# === 4. Merge ambos datasets ===
+df_h3 = pd.merge(carreras_por_ccaa, pib_promedio, on="CCAA")
+
+# === 5. Gráfico de dispersión ===
+plt.figure(figsize=(10, 6))
+sns.scatterplot(data=df_h3, x="PIB_anual", y="num_carreras", hue="CCAA")
+sns.regplot(data=df_h3, x="PIB_anual", y="num_carreras", scatter=False, color="red")
+plt.title("Número de carreras vs PIB por Comunidad Autónoma")
+plt.xlabel("PIB Medio Anual (€)")
+plt.ylabel("Número de Carreras")
+plt.grid(True)
+plt.tight_layout()
+plt.savefig(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\images\img_h3_correlacion_pib_carreras.png", dpi=300)
+plt.show()
+
+# === 6. Correlación ===
+corr, pval = pearsonr(df_h3["PIB_anual"], df_h3["num_carreras"])
+print(f"\n📊 Correlación PIB ↔ Número de carreras")
+print(f"Coeficiente de correlación: {corr:.2f}")
+print(f"P-value: {pval:.4f}")
+if pval < 0.05:
+    print("✅ Correlación estadísticamente significativa.")
+else:
+    print("⚠️ No es significativa.")
