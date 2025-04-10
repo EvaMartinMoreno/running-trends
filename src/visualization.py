@@ -346,3 +346,31 @@ plt.grid(True)
 plt.tight_layout()
 plt.savefig(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\images\h3_top_crecimiento_ccaa.png", dpi=300)
 plt.show()
+
+import pandas as pd
+
+# === Cargar los datasets ===
+carreras = pd.read_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\runedia\carreras_unidas.csv")
+socioeconomico = pd.read_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\processed\running_trends_cleaned_for_powerbi.csv", sep=",")
+
+# === Limpiar columnas clave ===
+carreras["provincia"] = carreras["provincia"].str.strip().str.lower()
+socioeconomico["CCAA"] = socioeconomico["CCAA"].str.strip().str.lower()
+carreras["año"] = carreras["año"].astype(int)
+socioeconomico["Año"] = socioeconomico["Año"].astype(int)
+
+# === Renombrar columnas para merge ===
+carreras = carreras.rename(columns={"provincia": "ccaa", "año": "Año"})
+
+# === Agrupar número de carreras por año y comunidad ===
+carreras_agg = carreras.groupby(["Año", "ccaa"], as_index=False).size().rename(columns={"size": "num_carreras"})
+
+# === Merge con socioeconómico ===
+merged = pd.merge(socioeconomico, carreras_agg, how="left", left_on=["Año", "CCAA"], right_on=["Año", "ccaa"])
+merged["num_carreras"] = merged["num_carreras"].fillna(0).astype(int)
+merged = merged.drop(columns=["ccaa"])  # eliminamos la duplicada
+
+# === Guardar en nuevo CSV ===
+output_path = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\processed\powerbi_combined_dataset.csv"
+merged.to_csv(output_path, index=False)
+print(f"✅ Dataset combinado guardado correctamente en:\n{output_path}")
