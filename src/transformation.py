@@ -1,113 +1,343 @@
 import requests
 import pandas as pd
-import time
-import os
 from bs4 import BeautifulSoup
+import time
+from IPython.display import display
 
-# === Función para obtener el HTML de una página ===
-def obtener_html(provincia, fecha, pagina):
-    url = f"https://runedia.mundodeportivo.com/calendario-carreras/espana/{provincia}/provincia/tipo/distancia/{fecha}/0/0/{pagina}/"
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        return response.text
-    else:
-        print(f"❌ Error {response.status_code} en página {pagina} de {provincia}")
-        return None
+# Dictionaries to store the data
+total_data = {"PIB_anual": {}, "PIB_capita": {}}
 
-# === Función para extraer datos de una carrera individual ===
-def parsear_caja_carrera(div, provincia):
-    try:
-        dia = div.find("span", class_="dia").text.strip()
-        mes = div.find("span", class_="mes").text.strip()
-    except:
-        dia, mes = None, None
+# Range of years to scrape
+years = range(2000, 2025) 
 
-    try:
-        enlace_tag = div.find("a", class_="nom-cursa")
-        titulo = enlace_tag.text.strip()
-        enlace = enlace_tag["href"]
-    except:
-        titulo, enlace = None, None
+# Loop through each year and scrape the data
+for year in years:
+    url = f"https://datosmacro.expansion.com/pib/espana-comunidades-autonomas?anio={year}"
+    response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+    soup = BeautifulSoup(response.content, "html.parser")
+    
+    # Find all the tables
+    tables = soup.find_all("table")
+    
+    # Scrape the first table (PIB anual)
+    if len(tables) > 0:
+        table_pib_anual = tables[0]
+        for row in table_pib_anual.find_all("tr")[1:]: 
+            cols = row.find_all("td")
+            if len(cols) > 1:
+                comunidad = cols[0].text.strip()
+                pib_crudo = cols[2].text.strip()
+                
+                # Save the data in the dictionary
+                if year not in total_data["PIB_anual"]:
+                    total_data["PIB_anual"][year] = []
+                total_data["PIB_anual"][year].append({
+                    "CCAA": comunidad,
+                    "PIB_anual": pib_crudo
+                })
+    
+    # Scrape the second table (PIB per cápita)
+    if len(tables) > 1:
+        table_pib_per_capita = tables[1]
+        for row in table_pib_per_capita.find_all("tr")[1:]:
+            cols = row.find_all("td")
+            if len(cols) > 1:
+                comunidad = cols[0].text.strip()
+                pib_per_capita = cols[2].text.strip()
+                
+                # Save the data in the dictionary
+                if year not in total_data["PIB_capita"]:
+                    total_data["PIB_capita"][year] = []
+                total_data["PIB_capita"][year].append({
+                    "CCAA": comunidad,
+                    "PIB_capita": pib_per_capita
+                })
 
-    try:
-        localidad = div.find("span", class_="lloc").text.strip()
-    except:
-        localidad = None
+# Convert the dictionaries to DataFrames
+df_PIB_anual = pd.DataFrame([
+    {"Año": year, **dato}
+    for year, datos in total_data["PIB_anual"].items()
+    for dato in datos
+])
 
-    try:
-        spans = div.find_all("span")
-        tipo = spans[-2].text.strip() if len(spans) >= 2 else None
-        distancia = spans[-1].text.strip() if len(spans) >= 1 else None
-    except:
-        tipo, distancia = None, None
+df_PIB_capita = pd.DataFrame([
+    {"Año": year, **dato}
+    for year, datos in total_data["PIB_capita"].items()
+    for dato in datos
+])
 
-    return {
-        "dia": dia,
-        "mes": mes,
-        "titulo": titulo,
-        "enlace": f"https://runedia.mundodeportivo.com{enlace}" if enlace and enlace.startswith("/") else enlace,
-        "localidad": localidad,
-        "tipo": tipo,
-        "distancia": distancia,
-        "provincia": provincia
-    }
+# Show the first 10 rows of each DataFrame
+print("Head of anual GDP table")
+display(df_PIB_anual.head(10))
+print("Head of GDP per capita table")
+display(df_PIB_capita.head(10))
 
-# === Función principal para scrapear todas las páginas de una provincia y año ===
-def obtener_carreras(provincia, fecha):
-    carreras = []
-    pagina = 1
-    while True:
-        print(f"🌐 Scrapeando página {pagina} de {provincia} ({fecha})")
-        html = obtener_html(provincia, fecha, pagina)
-        if html is None:
-            break
+#Unify the dataframes
+complete_df = pd.merge(df_PIB_anual, df_PIB_capita, on=["Año", "CCAA"], how="outer")
+display(complete_df.head())
 
-        soup = BeautifulSoup(html, "html.parser")
-        cajas = soup.find_all("div", class_="item-cursa")
-        if not cajas:
-            print("🔚 Fin de resultados (no hay más carreras).")
-            break
+#Function to normalize CCAA names in all our dataframes
+complete_df["CCAA"] = complete_df["CCAA"].replace({
+    "Andalucía [+]": "Andalucia",
+    "Aragón [+]": "Aragon",
+    "Asturias [+]": "Asturias",
+    "Canarias [+]": "Canarias", 
+    "Cantabria [+]": "Cantabria",
+    "Castilla y León [+]": "CastillaLeon",
+    "Castilla-La Mancha [+]": "CastillaLaMancha",
+    "Cataluña [+]": "Catalunya",
+    "Ceuta [+]": "Ceuta",
+    "Comunidad Valenciana [+]": "ComunidadValenciana",
+    "Comunidad de Madrid [+]": "Madrid",
+    "Extremadura [+]": "Extremadura",
+    "Galicia [+]": "Galicia",
+    "Islas Baleares [+]": "Baleares",
+    "La Rioja [+]": "LaRioja",
+    "Melilla [+]": "Melilla",
+    "Navarra [+]": "Navarra",
+    "País Vasco [+]": "PaisVasco",
+    "Región de Murcia [+]": "Murcia",
+    "Total Nacional" : "Total_Nacional"
+})
 
-        carreras += [parsear_caja_carrera(div, provincia) for div in cajas]
-        if len(carreras) > 500:
-            print("⚠️ Demasiadas carreras, deteniendo scraping por seguridad...")
-            break
-        pagina += 1
-        time.sleep(1)
+#Convert columns PIB_anual and PIB_capita to numeric values
+complete_df["PIB_anual"] = (
+    complete_df["PIB_anual"]
+    .astype(str)
+    .str.replace("\xa0", "")  # Clean the spaces
+    .str.replace("M€", "")  # Remove the "M€" suffix
+    .str.replace(",", ".")  # Replace comma with dot
+    .astype(float)  # Convert to float
+)
 
-    df = pd.DataFrame(carreras)
-    if not df.empty:
-        df["año"] = int(fecha.split("-")[0])
-    return df
+complete_df["PIB_capita"] = (
+    complete_df["PIB_capita"]
+    .astype(str)
+    .str.replace("\xa0", "")  
+    .str.replace("€", "")  
+    .str.replace(",", ".") 
+    .astype(float) 
+)
 
-# === Guardar los datos en CSV ===
-def guardar_csv(df, provincia, año):
-    os.makedirs("data", exist_ok=True)
-    ruta = f"data/carreras_{provincia}_{año}.csv"
-    df.to_csv(ruta, index=False)
-    print(f"✅ Archivo guardado: {ruta}")
+print("Basic info of PIB table created:")
+complete_df.info()
 
-# === EJECUCIÓN GENERAL ===
-def run():
-    provincias = [
-        "andalucia", "navarra", "asturias", "aragon", "canarias", "cantabria",
-        "castilla-la-mancha", "castilla-y-leon", "catalunya", "ceuta", "euskadi",
-        "extremadura", "galicia", "illes-balears", "la-rioja", "madrid", "melilla",
-        "murcia", "valencia"
-    ]
+print("Sample values:")
+display(complete_df.sample(15))
 
-    for year in range(2000, 2026):
-        fecha_inicio = f"{year}-01"
-        for provincia in provincias:
-            print(f"\n🔎 Iniciando scraping para: {provincia} ({year})")
-            df = obtener_carreras(provincia, fecha_inicio)
-            if not df.empty:
-                guardar_csv(df, provincia, year)
+#Save the DataFrame to a CSV file
+complete_df.to_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\running-trends-dataset.csv", index=False, sep=";")
+
+# Clean the data from "Renta ESP file"
+renta_df = pd.read_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\RentaESP-ccaa.csv", sep=";")
+renta_df.info()
+display(renta_df.head())
+renta_df.iloc[:, 1].unique()
+
+# We have to transpose this dataframe to extract the data we need
+pivoted_renta_df = renta_df.pivot(
+    index=["Periodo", "Comunidades y Ciudades Autónomas"], 
+    columns="Renta anual neta media por persona y por unidad de consumo",
+    values="Total"
+).reset_index()
+
+# Rename columns to match the column in complete_df
+pivoted_renta_df = pivoted_renta_df.rename(columns={
+    "Periodo": "Año",
+    "Comunidades y Ciudades Autónomas": "CCAA"
+})
+
+# Rename our columns to coincide with the dataset (running-data)
+pivoted_renta_df["CCAA"] = pivoted_renta_df["CCAA"].replace({
+    "01 Andalucía": "Andalucia",
+    "02 Aragón": "Aragon",
+    "03 Asturias, Principado de": "Asturias",
+    "05 Canarias": "Canarias", 
+    "06 Cantabria": "Cantabria",
+    "07 Castilla y León": "CastillaLeon",
+    "08 Castilla - La Mancha": "CastillaLaMancha",
+    "09 Cataluña": "Catalunya",
+    "18 Ceuta": "Ceuta",
+    "10 Comunitat Valenciana": "ComunidadValenciana",
+    "13 Madrid, Comunidad de": "Madrid",
+    "11 Extremadura": "Extremadura",
+    "12 Galicia": "Galicia",
+    "04 Balears, Illes": "Baleares",
+    "17 Rioja, La": "LaRioja",
+    "19 Melilla": "Melilla",
+    "15 Navarra, Comunidad Foral de": "Navarra",
+    "16 País Vasco": "PaisVasco",
+    "14 Murcia, Región de": "Murcia",
+    "Total Nacional" : "Total_Nacional"
+})
+
+pivoted_renta_df = pivoted_renta_df.sort_values(by="Año", ascending=False)
+display(pivoted_renta_df.head())
+
+# Join the data
+complete_df = pd.merge(complete_df, pivoted_renta_df, on=["Año", "CCAA"], how="left")
+print("This is our dataset now")
+display(complete_df.sample(10))
+
+
+# Clean the data from "Tasa paro ESP file"
+# Load the data
+import pandas as pd
+unemployment_df = pd.read_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\TasaParoESP-ccaa.csv", sep=";")
+unemployment_df.info()
+display(unemployment_df.head())
+
+# Clean the data
+column_ordered = ['Periodo', 'Comunidades y Ciudades Autónomas', 'Total', 'Edad', 'Sexo']
+unemployment_df = unemployment_df[column_ordered]
+unemployment_df['Periodo'] = unemployment_df['Periodo'].astype(str).str[:4]
+unemployment_df = unemployment_df[unemployment_df['Sexo'] == 'Ambos sexos']
+unemployment_df = unemployment_df[unemployment_df['Edad'] == 'Total']
+unemployment_df['Total'] = unemployment_df['Total'].astype(str).str.replace(',', '.').astype(float)
+unemployment_df = unemployment_df.rename(
+    columns={'Comunidades y Ciudades Autónomas': 'CCAA',
+             "Periodo": "Año",
+             "Total" : "Total_paro"}
+)
+
+#Function to normalize CCAA names in all our dataframes
+unemployment_df["CCAA"] = unemployment_df["CCAA"].replace({
+    "01 Andalucía": "Andalucia",
+    "02 Aragón": "Aragon",
+    "03 Asturias, Principado de": "Asturias",
+    "05 Canarias": "Canarias", 
+    "06 Cantabria": "Cantabria",
+    "07 Castilla y León": "CastillaLeon",
+    "08 Castilla - La Mancha": "CastillaLaMancha",
+    "09 Cataluña": "Catalunya",
+    "18 Ceuta": "Ceuta",
+    "10 Comunitat Valenciana": "ComunidadValenciana",
+    "13 Madrid, Comunidad de": "Madrid",
+    "11 Extremadura": "Extremadura",
+    "12 Galicia": "Galicia",
+    "04 Balears, Illes": "Baleares",
+    "17 Rioja, La": "LaRioja",
+    "19 Melilla": "Melilla",
+    "15 Navarra, Comunidad Foral de": "Navarra",
+    "16 País Vasco": "PaisVasco",
+    "14 Murcia, Región de": "Murcia",
+    "Total Nacional" : "Total_Nacional"
+})
+
+unemployment_df.groupby(['Año', 'CCAA'])['Total_paro'].sum().reset_index()
+unemployment_df["Año"] = unemployment_df["Año"].astype(int)
+complete_df["Año"] = complete_df["Año"].astype(int)
+print(unemployment_df)
+
+# Join the data to our dataset (running-trends)
+complete_df = pd.merge(complete_df, unemployment_df[["Año", "CCAA", "Total_paro"]], on=["Año", "CCAA"], how="left")
+display(complete_df.sample(10))
+
+# Clean the google trends data
+import os
+import pandas as pd
+
+folder_csv = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\google-trends"
+dfs = []
+
+for file in os.listdir(folder_csv):
+    if file.endswith(".csv"):
+        year = os.path.splitext(file)[0]  # Extract year from filename
+        path = os.path.join(folder_csv, file)
+        df = pd.read_csv(path, skiprows=1)
+        df.columns = ["Región", "Busqueda_running"]
+        df["Año"] = int(year)
+        dfs.append(df)
+        print(f" df_{year} loaded.")
+    else: pass 
+
+df_running_completo = pd.concat(dfs, ignore_index=True)
+df_running_pivot = df_running_completo.pivot(
+    index="Región",
+    columns="Año",
+    values="Busqueda_running"
+)
+
+df_running_pivot.columns = [f"busquedas_{col}" for col in df_running_pivot.columns]
+df_running_pivot = df_running_pivot.reset_index()
+
+# Convert back to long format for merging
+df_running_long = df_running_pivot.melt(
+    id_vars="Región",
+    var_name="Año",
+    value_name="busquedas_running"
+)
+
+df_running_long["Año"] = df_running_long["Año"].str.extract(r'(\d{4})').astype(int)
+df_running_long = df_running_long.rename(columns={"Región": "CCAA"})
+df_running_long["CCAA"] = df_running_long["CCAA"].replace({
+    "Andalucía": "Andalucia",
+    "Aragón": "Aragon",
+    "Principado de Asturias": "Asturias",
+    "Castilla y León": "CastillaLeon",
+    "Castilla-La Mancha": "CastillaLaMancha",
+    "Cataluña": "Catalunya",
+    "Comunidad Valenciana": "ComunidadValenciana",
+    "Comunidad de Madrid": "Madrid",
+    "Islas Baleares": "Baleares",
+    "La Rioja": "LaRioja",
+    "País Vasco": "PaisVasco",
+    "Región de Murcia": "Murcia",
+    "Canarias": "Canarias",
+    "Cantabria": "Cantabria",
+    "Ceuta": "Ceuta",
+    "Extremadura": "Extremadura",
+    "Galicia": "Galicia",
+    "Melilla": "Melilla",
+    "Navarra": "Navarra"
+})
+
+# Join this data to our running-trends dataset
+complete_df = pd.merge(complete_df, df_running_long, on=["Año", "CCAA"], how="left")
+
+print("Final dataset with running searches added:")
+display(complete_df.sample(10))
+
+#Save to csv
+complete_df.to_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\running-trends-dataset.csv", index=False, sep=";")
+
+#---transform data from Runedia---
+import os
+import pandas as pd
+
+carpeta = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\runedia"
+cabecera_esperada = ['dia', 'mes', 'titulo', 'enlace', 'localidad', 'tipo', 'distancia', 'provincia', 'año']
+
+dataframes = []
+archivos_ok = 0
+archivos_saltados = 0
+
+for archivo in os.listdir(carpeta):
+    if archivo.endswith(".csv"):
+        ruta = os.path.join(carpeta, archivo)
+        try:
+            df = pd.read_csv(ruta)
+            if len(df.columns) == 1:  # Puede estar en formato incorrecto (sep=";")
+                df = pd.read_csv(ruta, sep=";")
+
+            if not df.empty and list(df.columns[:9]) == cabecera_esperada:
+                dataframes.append(df)
+                archivos_ok += 1
             else:
-                print(f"⚠️ No se encontraron carreras para {provincia} en {year}")
+                print(f"⚠️ Cabecera no válida o archivo vacío: {archivo}")
+                archivos_saltados += 1
+        except Exception as e:
+            print(f"❌ Error leyendo {archivo}: {e}")
 
-if __name__ == "__main__":
-    run()
+if not dataframes:
+    print("🚫 No se encontraron archivos válidos para concatenar.")
+else:
+    df_unido = pd.concat(dataframes, ignore_index=True)
+    df_unido = df_unido.drop_duplicates().dropna()
+
+    salida = os.path.join(carpeta, "carreras_unidas.csv")
+    df_unido.to_csv(salida, index=False)
+
+    print(f"\n✅ Archivos combinados: {archivos_ok}")
+    print(f"🚫 Archivos saltados: {archivos_saltados}")
+    print(f"📁 Archivo final guardado: {salida}")
