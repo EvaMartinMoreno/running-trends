@@ -73,20 +73,19 @@ We then validate or reject several hypotheses based on visualizations and statis
 
 ### H1. Income vs Interest in Running 
 
-We observe that communities with **higher average income** tend to have **higher running-related search scores** on Google. This is analyzed both at total and year-by-year levels.
-
-We used scatter plots and line charts grouped by income categories (Low, Medium, High) to observe this relationship.
+We observe that communities with **higher average income** doesn't have tend to have **higher running-related search scores** on Google. 
+Our correlation index  and pvalue doesn't show us a clear result to confirm any hipotesis.   
 
 ### H2. Unemployment vs Interest in Running 
 
-By comparing **unemployment rates** and **Google Trends interest**, we noticed an inverse correlation:  
-higher unemployment areas tend to show **lower interest** in running activities.
+By comparing **unemployment rates** and **Google Trends interest**, we haven't noticed an inverse correlation.Hhgher unemployment areas don't tend to show **lower interest** in running activities. 
+Our correlation index  and pvalue doesn't show us a clear result to confirm any hipotesis.   
 
 ### H3. GDP vs Organized Races 
 
 We aggregated race data from Runedia (per province and year), and compared it to GDP data.  
-We find that wealthier regions (by average GDP) are often those organizing **more running races**.
-
+We find that wealthier regions (by average GDP) are not necessary  who  often those organizing **more running races**.
+Our correlation index  and pvalue doesn't show us a clear result to confirm any hipotesis.  
 
 ---
 
@@ -101,9 +100,8 @@ We find that wealthier regions (by average GDP) are often those organizing **mor
 
 ## CONCLUSION
 
-We find that **economic status influences running behavior**:
-- More income or higher GDP → more running interest and organized events
-- Higher unemployment → less running interest
+We find that **running behavior maybe are more influenced by another parameters thaneconomic status**:
+So that, this information push me to keep working to find parameters related to running.
 
 This project shows how public data, web scraping, and visualization can help us discover behavioral patterns related to health and activity.
 
