@@ -1,126 +1,111 @@
-# EDA & Data wrangling
+# EDA & Data Wrangling: Running Trends in Spain
 
-# OVERVIEW
-(link a power point de canva) 
-https://www.canva.com/design/DAFyF6kBUXE/w10cTbYW8N0NeiWTxkI5ow/edit?utm_content=DAFyF6kBUXE&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+## OVERVIEW
 
-This aim of this project is to make a dataset with different variables that show us the running trend since 20s to 2024, in the different Communities in Spain. 
-Economic parameters : GDP - unemployment rate - income level
-Running parameters: Race registrations - Google Trends searches 
-For afterwords, analyze the data to produce visualizations that will either prove or disprove hypotheses. 
+This project explores the evolution of **running** in Spain between **2000 and 2024**.  
+The aim is to combine data from multiple sources to analyze trends and find relationships between **socioeconomic indicators** and **running interest or behavior**.
 
-# LIBRARIES USED
+We explore the relationship between:
+- **Economic indicators** (GDP, unemployment, and income levels)
+- **Running indicators** (organized races and Google Trends interest)
 
-- Numpy
-- Pandas
-- Seaborn
-- Matplotlib.pyplot
-- Counter
+We then validate or reject several hypotheses based on visualizations and statistics.
 
-# HYPOTHESIS
-**Running. ¿Habit or trend? There is a significant trend towards an increase in running activity in general, but there are important peaks that create trend peaks.**
+---
 
-*1. Communities with greater purchasing power are more interessted in running* 
+## LIBRARIES USED
 
-*2.Communities with the highest unemployment are less interested in running*
+- `pandas`
+- `numpy`
+- `matplotlib`
+- `seaborn`
+- `scikit-learn`
+- `scipy`
+- `beautifulsoup4`
+- `requests`
+- `os`
 
-*3.There are more races in communities with major GDP*
+---
 
-# PROCESS FOLLOWED
+## HYPOTHESES
 
-1. Data extraction from different sources. 
-2. Cleaning of the dataset.
-3. Transforming the dataset.
-4. Create visuals to prove or dispruve the hypothesis.
-5. Explanations of the foundings & conclusions.
+**Running: Habit or Trend?**
 
-# DEVELOPEMENT (me he quedado aquí)
+1. **Communities with greater purchasing power are more interested in running**
 
-**H1. Communities with greater purchasing power are more interessted in running**
+2. **Communities with higher unemployment rates are less interested in running**
 
-![scatterplot](https://github.com/emmacunill/project_em/blob/main/images/scatter_attacks_years.jpg?raw=true)
+3. **Regions with higher GDPs host more races**
 
-As we can see in this plot, the shark attacks have increased in the last century. We can atribute that to different hypothesis. 
-1. is that we have more resources to navigate
-2. change of weather , although we don't have the data to demonstrate that
-3. change on the human life conditions
-4. maybe also change in the sense of peril
+---
 
-Let's see the data in another graphic so that we can analize it deeper.
+## PROCESS
 
-![image](https://github.com/emmacunill/project_em/blob/main/images/hist_attacks_years.png?raw=true)
+1. **Data Extraction**  
+   - Web scraping from multiple sources (Runedia, Expansion Datosmacro, INE, Google Trends)
+   - Saved in CSV format by province and year.
 
-In this graphic we see only the number of attacks from the 1800 to the actual moment.
+2. **Data Transformation & Cleaning**  
+   - Harmonize province names across datasets  
+   - Convert monetary/percentage values to numeric  
+   - Merge datasets into a clean format
 
-To be able to give response on which of our 4 hypothesis is true, we still need to analize deeper.
+3. **Exploratory Data Analysis (EDA)**  
+   - Remove outliers  
+   - Normalize values  
+   - Group variables into categories (High, Medium, Low)
 
-Let's understand why the sharks are not only not getting, tired, but getting fiercer.
+4. **Visualizations**  
+   - Time evolution graphs  
+   - Scatter plots  
+   - Histograms  
+   - Group comparisons
 
+5. **Power BI Dashboard**  
+   - Dynamic visualizations to support insights  
+   - Slicers for year and community filtering  
+   - Maps and ranked bar charts for top-performing regions
 
+---
 
+## HYPOTHESIS EXAMPLES
 
-**H2.Communities with the highest unemployment are less interested in running**
+### H1. Income vs Interest in Running 
 
-Shall we take a look at the activities people were doing when the attackes occurred?
+We observe that communities with **higher average income** tend to have **higher running-related search scores** on Google. This is analyzed both at total and year-by-year levels.
 
-The answer is obviously, YES, WE SHALL!! 
+We used scatter plots and line charts grouped by income categories (Low, Medium, High) to observe this relationship.
 
-![image](https://github.com/emmacunill/project_em/blob/main/images/activities.png?raw=true)
+### H2. Unemployment vs Interest in Running 
 
-From the data we get from the graphic, we can assume that the great mass of the attacks come from lifestyle. 
+By comparing **unemployment rates** and **Google Trends interest**, we noticed an inverse correlation:  
+higher unemployment areas tend to show **lower interest** in running activities.
 
-Let's get more specific and see only data on the activities from the last 50 years.
+### H3. GDP vs Organized Races 
 
-![image](https://github.com/emmacunill/project_em/blob/main/images/activities_years.png?raw=true)
-
-In perspective, we can see a decrease on the maybe considered more "survival" colum, fishing. And an increase of the "surf" column. But what also caught my attention is the shark interacting accidents has neither decreases or increases, so I want to check if that is because they are mostly concentrated recently or they're equally divided throughout the years.
-
-![image](https://github.com/emmacunill/project_em/blob/main/images/shark_int_years.jpg?raw=true)
-
-We can see that most of the shark interacting attacks are on increase in recent years. So maybe the hypothesis that the sense of peril has changed might also be true. Also meaning that humans are getting more annoying. 
-
-But is it all humans or just a fraction?
-
-
-
-**H3.There are more races in communities with major GDP**
-
-Let's prove the obvious answer, that we're not going to say."
-
-First let's check how the attacks over the years get distributed against the gender of the victims. 
-
-Is it always more or less the same pattern or is it diverse?
-
-![image](https://github.com/emmacunill/project_em/blob/main/images/years_sex.jpg?raw=true)
-
-As we can see from the plot, men have always been the winners of getting attacked by sharks.
-
-Now let's also check if we can extract more information from the age and the gender. 
-
-Is it just a fase, or are they like that?
-
-![image](https://github.com/emmacunill/project_em/blob/main/images/sex_age.png?raw=true)
-
-We can see from this box plot that between men and women, women number of attacks tend to be more stable along the age, the min and the max are more distant and the 50% of the data is also wider, meaning the data is more stable. Whilst men tend to be attacked by sharks on a more concentrated range of age.
-
-Maybe that has something to do with the activities that men and women are doing when the attacked happens.
-
-![image](https://github.com/emmacunill/project_em/blob/main/images/sex_activities.png?raw=true)
-
-The men normally do more adrenaline activities, so maybe they also have the peril sense lower and provoke more atacks? Let's see how many of the attacks where provoked between man and women.
-
-![image](https://github.com/emmacunill/project_em/blob/main/images/provoked_sex.jpg?raw=true)
-
-We see that most of the provoked attacks are by men. Let's also check shark interacting, because os sense of peril, to compare men and women participation, to end our hypothesis.
-
-![image](https://github.com/emmacunill/project_em/blob/main/images/sh_int_sex.jpg?raw=true)
-
-At least 75% of the shark interactinc¡g attacks are by men. Let's see how many of them are provoked.
-
-![image](https://github.com/emmacunill/project_em/blob/main/images/type_sex.png?raw=true)
+We aggregated race data from Runedia (per province and year), and compared it to GDP data.  
+We find that wealthier regions (by average GDP) are often those organizing **more running races**.
 
 
+---
 
-# CONCLUSIONS
+## HOW TO RUN IT
 
-Seing that a great number of attacks are provoked, and all the other data we analized: We can definitely say that sharks are not getting tired, they're just getting angrier as we humans change our lifestyle, and become more annoying, by getting more stupid, mostly men.
+1. Run `extraction.py` to collect data (Runedia, PIB, Google Trends, etc.)
+2. Run `transformation.py` to merge and clean all datasets
+3. Run `visualization.py` to generate the graphics used in the project
+4. Use `powerbi_combined_dataset.csv` inside Power BI for dashboard design
+
+---
+
+## CONCLUSION
+
+We find that **economic status influences running behavior**:
+- More income or higher GDP → more running interest and organized events
+- Higher unemployment → less running interest
+
+This project shows how public data, web scraping, and visualization can help us discover behavioral patterns related to health and activity.
+
+---
+
+*Project developed as part of a Master's in Data Analytics*

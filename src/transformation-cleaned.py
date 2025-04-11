@@ -1,127 +1,67 @@
+
 import os
 import pandas as pd
 
-# === 1. LOAD GDP DATA ===
-gdp_path = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\running-trends-dataset.csv"
-df = pd.read_csv(gdp_path, sep=";")
+# === Combine all race files into a single dataset ===
+def combine_runedia_races():
+    folder_path = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\runedia"
+    expected_columns = ['dia', 'mes', 'titulo', 'enlace', 'localidad', 'tipo', 'distancia', 'provincia', 'año']
+    all_dfs = []
 
-# === 2. CLEAN GDP COLUMNS ===
-df["PIB_anual"] = (
-    df["PIB_anual"]
-    .astype(str)
-    .str.replace("\xa0", "")
-    .str.replace("M€", "")
-    .str.replace(",", ".")
-    .astype(float)
-)
+    for file in os.listdir(folder_path):
+        if file.endswith(".csv"):
+            path = os.path.join(folder_path, file)
+            try:
+                df = pd.read_csv(path)
+                if len(df.columns) == 1:
+                    df = pd.read_csv(path, sep=";")
+                if not df.empty and list(df.columns[:9]) == expected_columns:
+                    all_dfs.append(df)
+            except Exception as e:
+                print(f"Error reading {file}: {e}")
 
-df["PIB_capita"] = (
-    df["PIB_capita"]
-    .astype(str)
-    .str.replace("\xa0", "")
-    .str.replace("€", "")
-    .str.replace(",", ".")
-    .astype(float)
-)
+    if all_dfs:
+        combined_df = pd.concat(all_dfs, ignore_index=True)
+        combined_df = combined_df.drop_duplicates().dropna()
 
-# === 3. LOAD AND TRANSFORM INCOME DATA ===
-income_path = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\RentaESP-ccaa.csv"
-income_df = pd.read_csv(income_path, sep=";")
+        output_path = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\processed\races_dataset.csv"
+        combined_df.to_csv(output_path, index=False)
+        print(f"Race dataset saved to: {output_path}")
+    else:
+        print("No valid race files found.")
 
-pivoted_income_df = income_df.pivot(
-    index=["Periodo", "Comunidades y Ciudades Autónomas"],
-    columns="Renta anual neta media por persona y por unidad de consumo",
-    values="Total"
-).reset_index()
 
-pivoted_income_df = pivoted_income_df.rename(columns={
-    "Periodo": "Año",
-    "Comunidades y Ciudades Autónomas": "CCAA"
-})
+# === Combine all socioeconomic data into a single dataset ===
+def create_combined_powerbi_dataset():
+    socio_path = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\processed\running_trends_cleaned_for_powerbi.csv"
+    race_path = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\processed\races_dataset.csv"
 
-pivoted_income_df["CCAA"] = pivoted_income_df["CCAA"].replace({
-    "01 Andalucía": "Andalucia",
-    "02 Aragón": "Aragon",
-    "03 Asturias, Principado de": "Asturias",
-    "05 Canarias": "Canarias",
-    "06 Cantabria": "Cantabria",
-    "07 Castilla y León": "CastillaLeon",
-    "08 Castilla - La Mancha": "CastillaLaMancha",
-    "09 Cataluña": "Catalunya",
-    "10 Comunitat Valenciana": "ComunidadValenciana",
-    "13 Madrid, Comunidad de": "Madrid",
-    "11 Extremadura": "Extremadura",
-    "12 Galicia": "Galicia",
-    "04 Balears, Illes": "Baleares",
-    "17 Rioja, La": "LaRioja",
-    "19 Melilla": "Melilla",
-    "15 Navarra, Comunidad Foral de": "Navarra",
-    "16 País Vasco": "PaisVasco",
-    "18 Ceuta": "Ceuta",
-    "14 Murcia, Región de": "Murcia",
-    "Total Nacional": "Total_Nacional"
-})
+    socio_df = pd.read_csv(socio_path, sep=",")
+    race_df = pd.read_csv(race_path, sep=",")
 
-pivoted_income_df["Año"] = pivoted_income_df["Año"].astype(int)
-df = pd.merge(df, pivoted_income_df, on=["Año", "CCAA"], how="left")
+    # Clean and align columns
+    socio_df["CCAA"] = socio_df["CCAA"].str.strip().str.lower()
+    race_df["provincia"] = race_df["provincia"].str.strip().str.lower()
+    socio_df["Año"] = socio_df["Año"].astype(int)
+    race_df["año"] = race_df["año"].astype(int)
 
-# === 4. LOAD AND CLEAN UNEMPLOYMENT DATA ===
-unemployment_path = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\TasaParoESP-ccaa.csv"
-unemployment_df = pd.read_csv(unemployment_path, sep=";")
-unemployment_df = unemployment_df[(unemployment_df["Sexo"] == "Ambos sexos") & (unemployment_df["Edad"] == "Total")]
+    # Rename to join properly
+    race_df = race_df.rename(columns={"provincia": "ccaa", "año": "Año"})
 
-unemployment_df = unemployment_df.rename(columns={
-    "Periodo": "Año",
-    "Comunidades y Ciudades Autónomas": "CCAA",
-    "Total": "Total_paro"
-})
+    # Count races per year and region
+    race_counts = race_df.groupby(["Año", "ccaa"], as_index=False).size().rename(columns={"size": "num_carreras"})
 
-unemployment_df["Total_paro"] = unemployment_df["Total_paro"].astype(str).str.replace(",", ".").astype(float)
-unemployment_df["Año"] = unemployment_df["Año"].astype(str).str[:4].astype(int)
+    # Merge
+    merged_df = pd.merge(socio_df, race_counts, how="left", left_on=["Año", "CCAA"], right_on=["Año", "ccaa"])
+    merged_df["num_carreras"] = merged_df["num_carreras"].fillna(0).astype(int)
+    merged_df = merged_df.drop(columns=["ccaa"])  # clean up duplicate
 
-unemployment_df["CCAA"] = unemployment_df["CCAA"].replace(pivoted_income_df["CCAA"].to_dict())
-df = pd.merge(df, unemployment_df[["Año", "CCAA", "Total_paro"]], on=["Año", "CCAA"], how="left")
+    # Save result
+    output_path = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\processed\powerbi_combined_dataset.csv"
+    merged_df.to_csv(output_path, index=False)
+    print(f" Combined Power BI dataset saved to: {output_path}")
 
-# === 5. LOAD AND MERGE GOOGLE TRENDS DATA ===
-google_folder = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\google-trends"
-all_trends = []
 
-for file in os.listdir(google_folder):
-    if file.endswith(".csv"):
-        year = os.path.splitext(file)[0]
-        path = os.path.join(google_folder, file)
-        trends_df = pd.read_csv(path, skiprows=1)
-        trends_df.columns = ["CCAA", "Busqueda_running"]
-        trends_df["Año"] = int(year)
-        all_trends.append(trends_df)
-
-df_trends = pd.concat(all_trends, ignore_index=True)
-
-df_trends["CCAA"] = df_trends["CCAA"].replace({
-    "Andalucía": "Andalucia",
-    "Aragón": "Aragon",
-    "Principado de Asturias": "Asturias",
-    "Castilla y León": "CastillaLeon",
-    "Castilla-La Mancha": "CastillaLaMancha",
-    "Cataluña": "Catalunya",
-    "Comunidad Valenciana": "ComunidadValenciana",
-    "Comunidad de Madrid": "Madrid",
-    "Islas Baleares": "Baleares",
-    "La Rioja": "LaRioja",
-    "País Vasco": "PaisVasco",
-    "Región de Murcia": "Murcia",
-    "Canarias": "Canarias",
-    "Cantabria": "Cantabria",
-    "Ceuta": "Ceuta",
-    "Extremadura": "Extremadura",
-    "Galicia": "Galicia",
-    "Melilla": "Melilla",
-    "Navarra": "Navarra"
-})
-
-df = pd.merge(df, df_trends, on=["Año", "CCAA"], how="left")
-
-# === 6. EXPORT FINAL CLEANED DATASET ===
-output_path = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\processed\running_trends_cleaned_for_powerbi.csv"
-df.to_csv(output_path, index=False, sep=";")
-print(f"\n✅ Final dataset saved to: {output_path}")
+if __name__ == "__main__":
+    combine_runedia_races()
+    create_combined_powerbi_dataset()

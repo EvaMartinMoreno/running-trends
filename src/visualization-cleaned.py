@@ -106,4 +106,4 @@ plt.tight_layout()
 plt.savefig("images/h4_race_types.png", dpi=300)
 plt.show()
 
-print("✅ All hypothesis visualizations generated!")
+print("All hypothesis visualizations generated!")
