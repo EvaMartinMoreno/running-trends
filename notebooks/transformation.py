@@ -1,0 +1,267 @@
+
+
+#Function to normalize CCAA names in all our dataframes
+complete_df["CCAA"] = complete_df["CCAA"].replace({
+    "Andalucía [+]": "Andalucia",
+    "Aragón [+]": "Aragon",
+    "Asturias [+]": "Asturias",
+    "Canarias [+]": "Canarias", 
+    "Cantabria [+]": "Cantabria",
+    "Castilla y León [+]": "CastillaLeon",
+    "Castilla-La Mancha [+]": "CastillaLaMancha",
+    "Cataluña [+]": "Catalunya",
+    "Ceuta [+]": "Ceuta",
+    "Comunidad Valenciana [+]": "ComunidadValenciana",
+    "Comunidad de Madrid [+]": "Madrid",
+    "Extremadura [+]": "Extremadura",
+    "Galicia [+]": "Galicia",
+    "Islas Baleares [+]": "Baleares",
+    "La Rioja [+]": "LaRioja",
+    "Melilla [+]": "Melilla",
+    "Navarra [+]": "Navarra",
+    "País Vasco [+]": "PaisVasco",
+    "Región de Murcia [+]": "Murcia",
+    "Total Nacional" : "Total_Nacional"
+})
+
+#Convert columns PIB_anual and PIB_capita to numeric values
+complete_df["PIB_anual"] = (
+    complete_df["PIB_anual"]
+    .astype(str)
+    .str.replace("\xa0", "")  # Clean the spaces
+    .str.replace("M€", "")  # Remove the "M€" suffix
+    .str.replace(",", ".")  # Replace comma with dot
+    .astype(float)  # Convert to float
+)
+
+complete_df["PIB_capita"] = (
+    complete_df["PIB_capita"]
+    .astype(str)
+    .str.replace("\xa0", "")  
+    .str.replace("€", "")  
+    .str.replace(",", ".") 
+    .astype(float) 
+)
+
+print("Basic info of PIB table created:")
+complete_df.info()
+
+print("Sample values:")
+display(complete_df.sample(15))
+
+#Save the DataFrame to a CSV file
+complete_df.to_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\running-trends-dataset.csv", index=False, sep=";")
+
+# Clean the data from "Renta ESP file"
+renta_df = pd.read_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\RentaESP-ccaa.csv", sep=";")
+renta_df.info()
+display(renta_df.head())
+renta_df.iloc[:, 1].unique()
+
+# We have to transpose this dataframe to extract the data we need
+pivoted_renta_df = renta_df.pivot(
+    index=["Periodo", "Comunidades y Ciudades Autónomas"], 
+    columns="Renta anual neta media por persona y por unidad de consumo",
+    values="Total"
+).reset_index()
+
+# Rename columns to match the column in complete_df
+pivoted_renta_df = pivoted_renta_df.rename(columns={
+    "Periodo": "Año",
+    "Comunidades y Ciudades Autónomas": "CCAA"
+})
+
+# Rename our columns to coincide with the dataset (running-data)
+pivoted_renta_df["CCAA"] = pivoted_renta_df["CCAA"].replace({
+    "01 Andalucía": "Andalucia",
+    "02 Aragón": "Aragon",
+    "03 Asturias, Principado de": "Asturias",
+    "05 Canarias": "Canarias", 
+    "06 Cantabria": "Cantabria",
+    "07 Castilla y León": "CastillaLeon",
+    "08 Castilla - La Mancha": "CastillaLaMancha",
+    "09 Cataluña": "Catalunya",
+    "18 Ceuta": "Ceuta",
+    "10 Comunitat Valenciana": "ComunidadValenciana",
+    "13 Madrid, Comunidad de": "Madrid",
+    "11 Extremadura": "Extremadura",
+    "12 Galicia": "Galicia",
+    "04 Balears, Illes": "Baleares",
+    "17 Rioja, La": "LaRioja",
+    "19 Melilla": "Melilla",
+    "15 Navarra, Comunidad Foral de": "Navarra",
+    "16 País Vasco": "PaisVasco",
+    "14 Murcia, Región de": "Murcia",
+    "Total Nacional" : "Total_Nacional"
+})
+
+pivoted_renta_df = pivoted_renta_df.sort_values(by="Año", ascending=False)
+display(pivoted_renta_df.head())
+
+# Join the data
+complete_df = pd.merge(complete_df, pivoted_renta_df, on=["Año", "CCAA"], how="left")
+print("This is our dataset now")
+display(complete_df.sample(10))
+
+
+# Clean the data from "Tasa paro ESP file"
+# Load the data
+import pandas as pd
+unemployment_df = pd.read_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\TasaParoESP-ccaa.csv", sep=";")
+unemployment_df.info()
+display(unemployment_df.head())
+
+# Clean the data
+column_ordered = ['Periodo', 'Comunidades y Ciudades Autónomas', 'Total', 'Edad', 'Sexo']
+unemployment_df = unemployment_df[column_ordered]
+unemployment_df['Periodo'] = unemployment_df['Periodo'].astype(str).str[:4]
+unemployment_df = unemployment_df[unemployment_df['Sexo'] == 'Ambos sexos']
+unemployment_df = unemployment_df[unemployment_df['Edad'] == 'Total']
+unemployment_df['Total'] = unemployment_df['Total'].astype(str).str.replace(',', '.').astype(float)
+unemployment_df = unemployment_df.rename(
+    columns={'Comunidades y Ciudades Autónomas': 'CCAA',
+             "Periodo": "Año",
+             "Total" : "Total_paro"}
+)
+
+#Function to normalize CCAA names in all our dataframes
+unemployment_df["CCAA"] = unemployment_df["CCAA"].replace({
+    "01 Andalucía": "Andalucia",
+    "02 Aragón": "Aragon",
+    "03 Asturias, Principado de": "Asturias",
+    "05 Canarias": "Canarias", 
+    "06 Cantabria": "Cantabria",
+    "07 Castilla y León": "CastillaLeon",
+    "08 Castilla - La Mancha": "CastillaLaMancha",
+    "09 Cataluña": "Catalunya",
+    "18 Ceuta": "Ceuta",
+    "10 Comunitat Valenciana": "ComunidadValenciana",
+    "13 Madrid, Comunidad de": "Madrid",
+    "11 Extremadura": "Extremadura",
+    "12 Galicia": "Galicia",
+    "04 Balears, Illes": "Baleares",
+    "17 Rioja, La": "LaRioja",
+    "19 Melilla": "Melilla",
+    "15 Navarra, Comunidad Foral de": "Navarra",
+    "16 País Vasco": "PaisVasco",
+    "14 Murcia, Región de": "Murcia",
+    "Total Nacional" : "Total_Nacional"
+})
+
+unemployment_df.groupby(['Año', 'CCAA'])['Total_paro'].sum().reset_index()
+unemployment_df["Año"] = unemployment_df["Año"].astype(int)
+complete_df["Año"] = complete_df["Año"].astype(int)
+print(unemployment_df)
+
+# Join the data to our dataset (running-trends)
+complete_df = pd.merge(complete_df, unemployment_df[["Año", "CCAA", "Total_paro"]], on=["Año", "CCAA"], how="left")
+display(complete_df.sample(10))
+
+# Clean the google trends data
+import os
+import pandas as pd
+
+folder_csv = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\google-trends"
+dfs = []
+
+for file in os.listdir(folder_csv):
+    if file.endswith(".csv"):
+        year = os.path.splitext(file)[0]  # Extract year from filename
+        path = os.path.join(folder_csv, file)
+        df = pd.read_csv(path, skiprows=1)
+        df.columns = ["Región", "Busqueda_running"]
+        df["Año"] = int(year)
+        dfs.append(df)
+        print(f" df_{year} loaded.")
+    else: pass 
+
+df_running_completo = pd.concat(dfs, ignore_index=True)
+df_running_pivot = df_running_completo.pivot(
+    index="Región",
+    columns="Año",
+    values="Busqueda_running"
+)
+
+df_running_pivot.columns = [f"busquedas_{col}" for col in df_running_pivot.columns]
+df_running_pivot = df_running_pivot.reset_index()
+
+# Convert back to long format for merging
+df_running_long = df_running_pivot.melt(
+    id_vars="Región",
+    var_name="Año",
+    value_name="busquedas_running"
+)
+
+df_running_long["Año"] = df_running_long["Año"].str.extract(r'(\d{4})').astype(int)
+df_running_long = df_running_long.rename(columns={"Región": "CCAA"})
+df_running_long["CCAA"] = df_running_long["CCAA"].replace({
+    "Andalucía": "Andalucia",
+    "Aragón": "Aragon",
+    "Principado de Asturias": "Asturias",
+    "Castilla y León": "CastillaLeon",
+    "Castilla-La Mancha": "CastillaLaMancha",
+    "Cataluña": "Catalunya",
+    "Comunidad Valenciana": "ComunidadValenciana",
+    "Comunidad de Madrid": "Madrid",
+    "Islas Baleares": "Baleares",
+    "La Rioja": "LaRioja",
+    "País Vasco": "PaisVasco",
+    "Región de Murcia": "Murcia",
+    "Canarias": "Canarias",
+    "Cantabria": "Cantabria",
+    "Ceuta": "Ceuta",
+    "Extremadura": "Extremadura",
+    "Galicia": "Galicia",
+    "Melilla": "Melilla",
+    "Navarra": "Navarra"
+})
+
+# Join this data to our running-trends dataset
+complete_df = pd.merge(complete_df, df_running_long, on=["Año", "CCAA"], how="left")
+
+print("Final dataset with running searches added:")
+display(complete_df.sample(10))
+
+#Save to csv
+complete_df.to_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\running-trends-dataset.csv", index=False, sep=";")
+
+#---transform data from Runedia---
+import os
+import pandas as pd
+
+carpeta = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\runedia"
+cabecera_esperada = ['dia', 'mes', 'titulo', 'enlace', 'localidad', 'tipo', 'distancia', 'provincia', 'año']
+
+dataframes = []
+archivos_ok = 0
+archivos_saltados = 0
+
+for archivo in os.listdir(carpeta):
+    if archivo.endswith(".csv"):
+        ruta = os.path.join(carpeta, archivo)
+        try:
+            df = pd.read_csv(ruta)
+            if len(df.columns) == 1:  # Puede estar en formato incorrecto (sep=";")
+                df = pd.read_csv(ruta, sep=";")
+
+            if not df.empty and list(df.columns[:9]) == cabecera_esperada:
+                dataframes.append(df)
+                archivos_ok += 1
+            else:
+                print(f"⚠️ Cabecera no válida o archivo vacío: {archivo}")
+                archivos_saltados += 1
+        except Exception as e:
+            print(f"❌ Error leyendo {archivo}: {e}")
+
+if not dataframes:
+    print("🚫 No se encontraron archivos válidos para concatenar.")
+else:
+    df_unido = pd.concat(dataframes, ignore_index=True)
+    df_unido = df_unido.drop_duplicates().dropna()
+
+    salida = os.path.join(carpeta, "carreras_unidas.csv")
+    df_unido.to_csv(salida, index=False)
+
+    print(f"\n✅ Archivos combinados: {archivos_ok}")
+    print(f"🚫 Archivos saltados: {archivos_saltados}")
+    print(f"📁 Archivo final guardado: {salida}")
