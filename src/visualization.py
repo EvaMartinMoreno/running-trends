@@ -374,3 +374,48 @@ merged = merged.drop(columns=["ccaa"])  # eliminamos la duplicada
 output_path = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\processed\powerbi_combined_dataset.csv"
 merged.to_csv(output_path, index=False)
 print(f"✅ Dataset combinado guardado correctamente en:\n{output_path}")
+
+
+#new races dataset # 
+import os
+import pandas as pd
+
+# Ruta de la carpeta que contiene los CSVs
+carpeta = r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\raw\runedia"  # cámbiala si es necesario
+
+# Lista para guardar los DataFrames
+dataframes = []
+
+# Cabecera esperada
+cabecera_esperada = ['dia', 'mes', 'titulo', 'enlace', 'localidad', 'tipo', 'distancia', 'provincia', 'año']
+
+# Recorremos todos los archivos .csv
+for archivo in os.listdir(carpeta):
+    if archivo.endswith(".csv"):
+        ruta = os.path.join(carpeta, archivo)
+        try:
+            df = pd.read_csv(ruta)
+
+            # Si está mal separado por ;, lo volvemos a intentar
+            if len(df.columns) == 1:
+                df = pd.read_csv(ruta, sep=";")
+
+            # Verificamos que la cabecera coincida
+            if list(df.columns[:9]) == cabecera_esperada:
+                dataframes.append(df)
+            else:
+                print(f"⚠️ Cabecera inesperada o archivo vacío: {archivo}")
+        except Exception as e:
+            print(f"❌ Error leyendo {archivo}: {e}")
+
+# Concatenamos todo
+if dataframes:
+    df_unido = pd.concat(dataframes, ignore_index=True)
+    df_unido = df_unido.drop_duplicates().dropna()
+
+    # Guardamos el resultado
+    salida = os.path.join(carpeta, "races_dataset.csv")
+    df_unido.to_csv(salida, index=False)
+    print(f"\n✅ Dataset final guardado en: {salida}")
+else:
+    print("🚫 No se encontraron archivos válidos.")
