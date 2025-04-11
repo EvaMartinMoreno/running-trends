@@ -34,6 +34,14 @@ plt.tight_layout()
 plt.savefig("C:/Users/evaru/Downloads/EVOLVE/python/running-trends/images/evolution_income_search.png", dpi=300)
 plt.show()
 
+# === Pearson Correlation for H1: Income vs Running Searches ===
+corr_h1, pval_h1 = pearsonr(evolution["Renta neta media por persona"], evolution["busquedas_running"])
+print(f"\n📈 H1 - Pearson correlation (Income vs Running searches): {corr_h1:.2f} (p-value: {pval_h1:.4f})")
+if pval_h1 < 0.05:
+    print("Podemos dar la hipótesis nula como válida (hay correlación significativa entre ingresos y búsquedas de running).")
+else:
+    print("No tenemos suficiente evidencia para invalidar el contrario a la hipótesis nula.")
+
 # === H2: Higher unemployment, less interest in running ===
 unemp_evolution = df.groupby("Año")[["Total_paro", "busquedas_running"]].mean().dropna()
 unemp_scaled = pd.DataFrame(scaler.fit_transform(unemp_evolution), columns=unemp_evolution.columns, index=unemp_evolution.index)
@@ -50,6 +58,14 @@ plt.tight_layout()
 plt.savefig("C:/Users/evaru/Downloads/EVOLVE/python/running-trends/images/evolution_unemployment_search.png", dpi=300)
 plt.show()
 
+# === Pearson Correlation for H2: Unemployment vs Running Searches ===
+corr_h2, pval_h2 = pearsonr(unemp_evolution["Total_paro"], unemp_evolution["busquedas_running"])
+print(f"\n📉 H2 - Pearson correlation (Unemployment vs Running searches): {corr_h2:.2f} (p-value: {pval_h2:.4f})")
+if pval_h2 < 0.05:
+    print("Podemos dar la hipótesis nula como válida (hay correlación significativa entre desempleo y búsquedas de running).")
+else:
+    print("No tenemos suficiente evidencia para invalidar el contrario a la hipótesis nula.")
+
 # === H3: Communities with higher GDP host more races ===
 pib_avg = df.groupby("CCAA")["PIB_anual"].mean().reset_index()
 race_total = df.groupby("CCAA")["num_carreras"].sum().reset_index()
@@ -65,8 +81,12 @@ plt.tight_layout()
 plt.savefig("C:/Users/evaru/Downloads/EVOLVE/python/running-trends/images/h3_pib_vs_races.png", dpi=300)
 plt.show()
 
-corr, p_val = pearsonr(merge_pib_races["PIB_anual"], merge_pib_races["num_carreras"])
-print(f"\n📊 Pearson correlation between GDP and races: {corr:.2f} (p-value: {p_val:.4f})")
+corr_h3, pval_h3 = pearsonr(merge_pib_races["PIB_anual"], merge_pib_races["num_carreras"])
+print(f"\n📊 H3 - Pearson correlation (GDP vs Total Races): {corr_h3:.2f} (p-value: {pval_h3:.4f})")
+if pval_h3 < 0.05:
+    print("Podemos dar la hipótesis nula como válida (hay correlación significativa entre PIB y número de carreras).")
+else:
+    print("No tenemos suficiente evidencia para invalidar el contrario a la hipótesis nula.")
 
 # === H4: Race distribution behavior ===
 carreras = pd.read_csv(r"C:\Users\evaru\Downloads\EVOLVE\python\running-trends\data\processed\races_dataset.csv")

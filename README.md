@@ -42,7 +42,8 @@ We then validate or reject several hypotheses based on visualizations and statis
 ## PROCESS
 
 1. **Data Extraction**  
-   - Web scraping from multiple sources (Runedia, Expansion Datosmacro, INE, Google Trends)
+   - Web scraping from multiple sources (Runedia, Expansion Datosmacro, Google Trends)
+   - Download data from Public sources (INE)
    - Saved in CSV format by province and year.
 
 2. **Data Transformation & Cleaning**  
